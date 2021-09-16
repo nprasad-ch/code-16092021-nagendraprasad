@@ -1,0 +1,164 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "template to create codebuild",
+    "Parameters": {
+        "SQSQueueName": {
+            "Type": "String",
+            "Default": "Myproject1",
+            "Description": "project name"
+        },
+        "Bucketname": {
+            "Type": "String",
+            "Default": "temptestbuck",
+            "Description": "project name"
+        }
+    },
+    "Resources": {
+        "SNSTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "DisplayName": "contentsnsTopic"
+            }
+        },
+        "sqssnssubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+                "Endpoint": {
+                    "Fn::GetAtt": [
+                        "SQSQueue",
+                        "Arn"
+                    ]
+                },
+                "RawMessageDelivery": true,
+                "Protocol": "sqs",
+                "TopicArn": {
+                    "Ref": "SNSTopic"
+                }
+            }
+        },
+        "SQSQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "QueueName": {
+                    "Ref": "SQSQueueName"
+                },
+                "VisibilityTimeout": 120
+            }
+        },
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": [
+                        {
+                            "ServerSideEncryptionByDefault": {
+                                "SSEAlgorithm": "AES256"
+                            }
+                        }
+                    ]
+                },
+                "BucketName": {
+                    "Ref": "Bucketname"
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            }
+        },
+        "LambdaRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "lambda.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:*",
+                                        "sqs:*",
+                                        "cloudwatch:*",
+                                        "logs:*"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        },
+                        "PolicyName": "S3Access"
+                    }
+                ]
+            }
+        },
+        "LambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+                "Runtime": "python3.8",
+                "Timeout": 120,
+                "Handler": "index.lambda_handler",
+                "Role": {
+                    "Fn::GetAtt": [
+                        "LambdaRole",
+                        "Arn"
+                    ]
+                },
+                "Code": {
+                    "S3Bucket": "index-s3",
+                    "S3Key": "index.zip"
+                },
+                "FunctionName": "sqs-to-s3-lambda-function",
+                "Environment": {
+                    "Variables": {
+                        "bucket_name": {
+                            "Ref": "S3Bucket"
+                        }
+                    }
+                }
+            }
+        },
+        "SQSPermission": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+                "FunctionName": {
+                    "Ref": "LambdaFunction"
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "sqs.amazonaws.com",
+                "SourceArn": {
+                    "Fn::GetAtt": [
+                        "SQSQueue",
+                        "Arn"
+                    ]
+                }
+            }
+        },
+        "SQSEventSource": {
+            "Type": "AWS::Lambda::EventSourceMapping",
+            "Properties": {
+                "Enabled": true,
+                "EventSourceArn": {
+                    "Fn::GetAtt": [
+                        "SQSQueue",
+                        "Arn"
+                    ]
+                },
+                "FunctionName": {
+                    "Ref": "LambdaFunction"
+                }
+            }
+        }
+    },
+    "Outputs": {}
+}
