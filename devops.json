@@ -106,7 +106,7 @@
             "Type": "AWS::Lambda::Function",
             "Properties": {
                 "Runtime": "python3.8",
-                "Timeout": 120,
+                "Timeout": 180,
                 "Handler": "index.lambda_handler",
                 "Role": {
                     "Fn::GetAtt": [
@@ -116,7 +116,7 @@
                 },
                 "Code": {
                     "S3Bucket": "index-s3",
-                    "S3Key": "index.zip"
+                    "S3Key": "sampleindex.zip"
                 },
                 "FunctionName": "sqs-to-s3-lambda-function",
                 "Environment": {
