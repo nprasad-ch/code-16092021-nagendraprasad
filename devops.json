@@ -9,7 +9,7 @@
         },
         "Bucketname": {
             "Type": "String",
-            "Default": "temptestbuck",
+            "Default": "tempdemobuck",
             "Description": "project name"
         }
     },
