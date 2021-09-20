@@ -42,7 +42,7 @@
                 "QueueName": {
                     "Ref": "SQSQueueName"
                 },
-                "VisibilityTimeout": 120
+                "VisibilityTimeout": 180
             }
         },
         "S3Bucket": {
